@@ -1,0 +1,43 @@
+Package: fastrcmdcheck
+Title: Fast, Parallel, Cache-Aware 'R CMD check' for CI
+Version: 0.1.0
+Authors@R: c(
+    person(
+        given = "Grant",
+        family = "Neilson",
+        email = "grant@cosyne.com",
+        role = c("aut", "cre", "cph")
+    ),
+    person(
+        given = "Gregor",
+        family = "Lueg",
+        role = "ctb"
+    )
+  )
+Description: A drop-in, substantially faster alternative to 'rcmdcheck' for
+    continuous integration. The package is compiled exactly once (in
+    parallel, through 'ccache' / 'sccache' and with a persistent 'cargo'
+    target directory for Rust code), and the static 'R CMD check' checks,
+    unit tests, examples and vignettes then run concurrently against that
+    single installation.
+URL: https://github.com/grantn5/fastrcmdcheck
+License: MIT + file LICENSE
+Encoding: UTF-8
+Depends: R (>= 4.1)
+Imports:
+    processx (>= 3.8.0),
+    jsonlite,
+    parallel,
+    stats,
+    tools,
+    utils
+Suggests:
+    BiocStyle,
+    knitr,
+    mockr,
+    quarto,
+    sessioninfo,
+    testthat (>= 3.0.0)
+VignetteBuilder: knitr, quarto
+Config/testthat/edition: 3
+Config/roxygen2/version: 8.1.0

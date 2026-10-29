@@ -1,0 +1,55 @@
+---
+title: "Fast, Parallel, Cache-Aware R CMD Check for CI"
+vignette: >
+  %\VignetteIndexEntry{Fast, Parallel, Cache-Aware R CMD Check for CI}
+  %\VignetteEngine{quarto::html}
+  %\VignetteEncoding{UTF-8}
+knitr:
+  opts_chunk:
+    collapse: true
+    comment: '#>'
+---
+
+```{r}
+#| label: setup
+library(fastrcmdcheck)
+```
+
+## fastrcmdcheck
+
+A drop-in, substantially faster alternative to rcmdcheck for continuous integration.
+
+## Installation
+
+Install with
+
+```{r}
+#| label: install
+#| eval: false
+remotes::install_github(
+    repo = "grantn5/fastrcmdcheck"
+  )
+```
+
+## Required knowledge
+
+> 📌: Specify the required background knowledge that is needed to understand and apply this package e.g. Perturb-seq if this is a package aimed at automating guide assignment.
+
+## Input data
+
+> 📌: Often, bioinformatic input data is varied and complex with several different (pre)processing steps. The aim of this section is to describe the required input for your package along with any specific preprocessing steps that are required.
+
+## Usage
+
+> 📌: Include examples of the functionality of `fastrcmdcheck`. For instance, if your package is designed to automate a specific workflow, then detail all the steps required with a small, example dataset; try to explain the rationale behind each step. Make sure you also cover any edge cases and potential caveats that may not be obvious to a user without deep-diving into the code itself.
+
+## Session info
+
+<details>
+  <summary>Show/hide</summary>
+```{r "session-info", echo = FALSE}
+library(sessioninfo)
+options(width = 120)
+session_info()
+```
+</details>

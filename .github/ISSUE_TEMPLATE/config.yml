@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: 📖 Package Documentation
+    url: https://grantn5.github.io/fastrcmdcheck
+    about: Visit the package documentation website
+  - name: 💬 Discussions
+    url: https://github.com/grantn5/fastrcmdcheck/discussions
+    about: Ask questions and discuss ideas with the community

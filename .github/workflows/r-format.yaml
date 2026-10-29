@@ -1,0 +1,28 @@
+name: Format R Code
+
+on:
+  pull_request:
+    paths:
+      - "**/*.R"
+      - "**/*.Rmd"
+      - "**/*.qmd"
+      - ".github/workflows/r-format.yaml"
+  workflow_dispatch:
+
+jobs:
+  format-r:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+
+      - name: Verify air config exists
+        run: test -f air.toml
+
+      - name: Format R code
+        uses: rstudio/shiny-workflows/format-r-code@v1
+        with:
+          version: 0.11.0
+          check: true
+          working-directory: .

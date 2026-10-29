@@ -1,0 +1,108 @@
+name: fastrcmdcheck
+description: >
+  Fast drop-in replacement for r-lib/actions/check-r-package: compile once
+  (parallel + ccache/sccache + persistent cargo target), then run static
+  checks, sharded tests, examples and vignettes concurrently.
+inputs:
+  path:
+    description: Package directory.
+    default: "."
+  args:
+    description: Extra R CMD check arguments, space separated.
+    default: "--as-cran"
+  error-on:
+    description: never, error, warning or note.
+    default: "warning"
+  profile:
+    description: faithful (same compiler flags as R CMD check) or fast (-O0 C/C++, no-LTO Rust).
+    default: "faithful"
+  jobs:
+    description: Parallelism; defaults to the number of cores.
+    default: ""
+  cache-version:
+    description: Bump to invalidate the compiler caches.
+    default: "1"
+  upload-results:
+    description: Upload the check directory as an artifact on failure.
+    default: "true"
+runs:
+  using: composite
+  steps:
+    - name: Install compiler caches
+      shell: bash
+      # Inputs reach the shell through env, never via ${{ }} in the script, so
+      # their values cannot be interpreted as shell code.
+      env:
+        PKG_PATH: ${{ inputs.path }}
+      run: |
+        if [ "$RUNNER_OS" = "Linux" ] && ! command -v ccache >/dev/null; then
+          sudo apt-get install -y -qq ccache >/dev/null || true
+        elif [ "$RUNNER_OS" = "macOS" ] && ! command -v ccache >/dev/null; then
+          brew install ccache >/dev/null || true
+        fi
+        # A caller that already set RUSTC_WRAPPER (e.g. a reusable
+        # check workflow) owns sccache; accel_env() leaves it alone too.
+        if [ -z "${RUSTC_WRAPPER:-}" ] && { [ -f "$PKG_PATH/src/rust/Cargo.toml" ] || ls "$PKG_PATH"/src/*/Cargo.toml >/dev/null 2>&1; }; then
+          echo "FASTCHECK_OWNS_SCCACHE=true" >> "$GITHUB_ENV"
+        fi
+        echo "FASTCHECK_CACHE_DIR=${{ runner.temp }}/fastrcmdcheck-cache" >> "$GITHUB_ENV"
+        echo "R_VERSION_KEY=$(Rscript -e 'cat(R.version$major, R.version$minor, sep=".")')" >> "$GITHUB_ENV"
+
+    - name: Install sccache (Rust packages)
+      if: env.FASTCHECK_OWNS_SCCACHE == 'true'
+      uses: mozilla-actions/sccache-action@v0.0.9
+
+    - name: Restore compiler caches
+      uses: actions/cache@v4
+      with:
+        path: ${{ runner.temp }}/fastrcmdcheck-cache
+        key: fastrcmdcheck-${{ inputs.cache-version }}-${{ runner.os }}-R${{ env.R_VERSION_KEY }}-${{ inputs.profile }}-${{ hashFiles(format('{0}/src/**', inputs.path), format('{0}/DESCRIPTION', inputs.path)) }}
+        restore-keys: |
+          fastrcmdcheck-${{ inputs.cache-version }}-${{ runner.os }}-R${{ env.R_VERSION_KEY }}-${{ inputs.profile }}-
+
+    - name: Install fastrcmdcheck
+      shell: Rscript {0}
+      env:
+        ACTION_PATH: ${{ github.action_path }}
+      run: |
+        # Compare versions, not just presence: a cached R library can hold an
+        # older fastrcmdcheck that would otherwise shadow this action's version.
+        want <- read.dcf(file.path(Sys.getenv("ACTION_PATH"), "DESCRIPTION"), "Version")[[1]]
+        have <- if (requireNamespace("fastrcmdcheck", quietly = TRUE)) {
+          as.character(utils::packageVersion("fastrcmdcheck"))
+        } else ""
+        if (!identical(have, want)) {
+          if (!requireNamespace("pak", quietly = TRUE)) install.packages("pak")
+          pak::pkg_install(paste0("local::", Sys.getenv("ACTION_PATH")), upgrade = FALSE)
+        }
+
+    - name: Check
+      shell: bash
+      env:
+        PKG_PATH: ${{ inputs.path }}
+        ARGS: ${{ inputs.args }}
+        PROFILE: ${{ inputs.profile }}
+        ERROR_ON: ${{ inputs.error-on }}
+        JOBS: ${{ inputs.jobs }}
+      run: |
+        # Our sccache writes to SCCACHE_DIR in the actions/cache dir above; a
+        # caller-owned sccache keeps whatever backend the caller configured.
+        [ "${FASTCHECK_OWNS_SCCACHE:-}" = "true" ] && export SCCACHE_GHA_ENABLED=false
+        [ -n "$JOBS" ] && export FASTCHECK_JOBS="$JOBS"
+        # Word-split args into an array without glob or command expansion.
+        read -ra extra_args <<< "$ARGS"
+        Rscript -e 'fastrcmdcheck::fastcheck_cli()' \
+          --profile "$PROFILE" \
+          --error-on "$ERROR_ON" \
+          --check-dir "${{ runner.temp }}/fastrcmdcheck-check" \
+          --json "${{ runner.temp }}/fastrcmdcheck-check/results.json" \
+          "${extra_args[@]}" "$PKG_PATH"
+
+    - name: Upload check results
+      if: failure() && inputs.upload-results == 'true'
+      uses: actions/upload-artifact@v4
+      with:
+        name: fastrcmdcheck-${{ runner.os }}-results
+        path: |
+          ${{ runner.temp }}/fastrcmdcheck-check
+          !${{ runner.temp }}/fastrcmdcheck-check/lib

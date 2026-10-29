@@ -1,0 +1,17 @@
+name: Auto tag
+
+# Tags v<Version> from DESCRIPTION and cuts a release, but only after
+# R-CMD-check has passed on main.
+on:
+  workflow_run:
+    workflows: ["R-CMD-check"]
+    branches: [main]
+    types: [completed]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  tag:
+    uses: GregorLueg/personal-actions/.github/workflows/r-auto-tag.yml@v1

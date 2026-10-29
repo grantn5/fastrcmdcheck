@@ -1,0 +1,2 @@
+#!/usr/bin/env Rscript
+fastrcmdcheck::fastcheck_cli(commandArgs(TRUE))

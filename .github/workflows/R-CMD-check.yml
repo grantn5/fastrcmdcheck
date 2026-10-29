@@ -1,0 +1,20 @@
+name: R-CMD-check
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+# CRAN-style check of the built tarball: Linux, macOS and Windows on R release
+# and devel, --as-cran with NOT_CRAN unset. This is what r-universe runs.
+jobs:
+  check:
+    uses: GregorLueg/personal-actions/.github/workflows/r-cran-check.yml@v1
+    with:
+      # Pure R package, no crates to vendor.
+      vendor-script: ""
